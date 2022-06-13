@@ -15,7 +15,12 @@ $ pnpm install
 
 ## Running the app
 
+This app needs some environment variables, see .env.example file.
+
 ```bash
+# initialize dev-db
+docker-compose up -d
+
 # development
 $ pnpm start
 
