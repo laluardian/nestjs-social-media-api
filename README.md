@@ -21,6 +21,9 @@ This app needs some environment variables, see .env.example file.
 # initialize dev-db
 docker-compose up -d
 
+# create a migration
+npx prisma migrate dev
+
 # development
 $ pnpm start
 
