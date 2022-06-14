@@ -108,9 +108,10 @@ export class PostService {
 
   async deletePost(userId: string, postId: string) {
     try {
-      const post = await this.db.post.findUnique({
-        where: { id: postId },
-      })
+      const [user, post] = await this.db.$transaction([
+        this.db.user.findUnique({ where: { id: userId } }),
+        this.db.post.findUnique({ where: { id: postId } }),
+      ])
 
       if (!post) {
         throw new NotFoundException(
@@ -118,7 +119,7 @@ export class PostService {
         )
       }
 
-      if (post.authorId !== userId) {
+      if (post.authorId !== user.id) {
         throw new ForbiddenException('You are not allowed to delete this post')
       }
 
