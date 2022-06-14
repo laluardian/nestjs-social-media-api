@@ -4,7 +4,7 @@ A simple social media API built with Nest.js, Prisma, & PostgreSQL.
 
 ## TODO
 - Tests
-- Add new features (post, comment)
+- <s>Add new features (post, comment)</s>
 - etc...
 
 ## Installation
