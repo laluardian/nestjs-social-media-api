@@ -15,13 +15,14 @@ export const profileSelect = {
 export class UserService {
   constructor(private db: DatabaseService) {}
 
-  async getUser(username: string, { get }: ParsedUrlQuery) {
+  async getUserAndStuff(username: string, { get }: ParsedUrlQuery) {
     const user = await this.db.user.findUnique({
       where: { username },
       include: {
         followers: { select: profileSelect },
         following: { select: profileSelect },
-        posts: {},
+        posts: true,
+        likes: true,
       },
     })
 
@@ -29,8 +30,9 @@ export class UserService {
       throw new NotFoundException('The user you are looking for does not exist')
     }
 
+    if (get === 'posts' || get === 'likes') return user[get].map(post => post)
     if (get === 'followers' || get === 'following') {
-      return user[get as string].map(({ id, username, image, bio }: User) => {
+      return user[get].map(({ id, username, image, bio }: User) => {
         return { id, username, image, bio }
       })
     }

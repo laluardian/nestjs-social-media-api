@@ -19,8 +19,11 @@ export class UserController {
   constructor(private user: UserService) {}
 
   @Get(':username')
-  getUser(@Param('username') username: string, @Query() query: ParsedUrlQuery) {
-    return this.user.getUser(username, query)
+  getUserAndStuff(
+    @Param('username') username: string,
+    @Query() query: ParsedUrlQuery,
+  ) {
+    return this.user.getUserAndStuff(username, query)
   }
 
   @Get()
