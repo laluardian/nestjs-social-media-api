@@ -4,7 +4,7 @@ import { ParsedUrlQuery } from 'querystring'
 import { DatabaseService } from 'src/database/database.service'
 import { UpdateUserDto } from './dto'
 
-const profileSelect = {
+export const profileSelect = {
   id: true,
   username: true,
   image: true,
