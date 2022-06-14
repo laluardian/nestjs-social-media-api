@@ -1,6 +1,7 @@
 import {
   ForbiddenException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common'
 import { DatabaseService } from 'src/database/database.service'
@@ -16,6 +17,7 @@ export class PostService {
       where: { id: postId },
       include: {
         likedBy: { select: profileSelect },
+        comments: true,
       },
     })
 
@@ -43,79 +45,91 @@ export class PostService {
   }
 
   async createPost(userId: string, dto: CreatePostDto) {
-    const post = await this.db.post.create({
-      data: { authorId: userId, ...dto },
-    })
+    try {
+      const post = await this.db.post.create({
+        data: { authorId: userId, ...dto },
+      })
 
-    return post
+      return post
+    } catch (error) {
+      throw new InternalServerErrorException('Something went wrong')
+    }
   }
 
   async likeOrUnlikePost(userId: string, postId: string) {
-    const [post, user] = await this.db.$transaction([
-      this.db.post.findUnique({ where: { id: postId } }),
-      this.db.user.findUnique({
-        where: { id: userId },
-        include: { likes: true },
-      }),
-    ])
+    try {
+      const [post, user] = await this.db.$transaction([
+        this.db.post.findUnique({ where: { id: postId } }),
+        this.db.user.findUnique({
+          where: { id: userId },
+          include: { likes: true },
+        }),
+      ])
 
-    if (!post) {
-      throw new NotFoundException(
-        'The post you are trying to like does not exist',
-      )
-    }
+      if (!post) {
+        throw new NotFoundException(
+          'The post you are trying to like does not exist',
+        )
+      }
 
-    if (user.likes.some(post => post.id === postId)) {
+      if (user.likes.some(post => post.id === postId)) {
+        await this.db.user.update({
+          where: { id: userId },
+          data: {
+            likes: {
+              disconnect: { id: post.id },
+            },
+          },
+        })
+
+        return {
+          statusCode: 200,
+          message: `${user.username} unliked a post with id ${post.id}`,
+        }
+      }
+
       await this.db.user.update({
         where: { id: userId },
         data: {
           likes: {
-            disconnect: { id: post.id },
+            connect: { id: post.id },
           },
         },
       })
 
       return {
-        statusCode: 200,
-        message: `${user.username} unliked a post with id ${post.id}`,
+        status: 200,
+        message: `${user.username} liked a post with id ${post.id}`,
       }
-    }
-
-    await this.db.user.update({
-      where: { id: userId },
-      data: {
-        likes: {
-          connect: { id: post.id },
-        },
-      },
-    })
-
-    return {
-      status: 200,
-      message: `${user.username} liked a post with id ${post.id}`,
+    } catch (error) {
+      throw new InternalServerErrorException('Something went wrong')
     }
   }
 
   async deletePost(userId: string, postId: string) {
-    const post = await this.db.post.findUnique({
-      where: { id: postId },
-    })
+    try {
+      const post = await this.db.post.findUnique({
+        where: { id: postId },
+      })
 
-    if (!post) {
-      throw new NotFoundException(
-        'The post you are trying to delete does not exist',
-      )
-    }
+      if (!post) {
+        throw new NotFoundException(
+          'The post you are trying to delete does not exist',
+        )
+      }
 
-    if (post.authorId !== userId) {
-      throw new ForbiddenException('You are not allowed to delete this post')
-    }
+      if (post.authorId !== userId) {
+        throw new ForbiddenException('You are not allowed to delete this post')
+      }
 
-    await this.db.post.delete({ where: { id: postId } })
+      await this.db.post.delete({ where: { id: postId } })
 
-    return {
-      statusCode: 200,
-      message: `Post with id ${post.id} successfully deleted`,
+      return {
+        statusCode: 200,
+        message: `Post with id ${post.id} successfully deleted`,
+      }
+    } catch (error) {
+      throw new InternalServerErrorException('Something went wrong')
     }
   }
 }

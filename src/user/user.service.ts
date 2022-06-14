@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common'
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common'
 import { User } from '@prisma/client'
 import { ParsedUrlQuery } from 'querystring'
 import { DatabaseService } from 'src/database/database.service'
@@ -57,79 +61,91 @@ export class UserService {
   }
 
   async updateUser(userId: string, dto: UpdateUserDto) {
-    const user = await this.db.user.update({
-      where: { id: userId },
-      data: { ...dto },
-    })
+    try {
+      const user = await this.db.user.update({
+        where: { id: userId },
+        data: { ...dto },
+      })
 
-    delete user.hash
-    return user
+      delete user.hash
+      return user
+    } catch (error) {
+      throw new InternalServerErrorException('Something went wrong')
+    }
   }
 
   async deleteUser(userId: string) {
-    const [, { username }] = await this.db.$transaction([
-      // delete posts associated with the user
-      // comments associated with the posts are also deleted cascadely
-      this.db.post.deleteMany({ where: { authorId: userId } }),
-      // actually delete the user
-      // comments associated with the user are also deleted cascadely
-      this.db.user.delete({ where: { id: userId } }),
-    ])
+    try {
+      const [, { username }] = await this.db.$transaction([
+        // delete posts associated with the user
+        // comments associated with the posts are also deleted cascadely
+        this.db.post.deleteMany({ where: { authorId: userId } }),
+        // actually delete the user
+        // comments associated with the user are also deleted cascadely
+        this.db.user.delete({ where: { id: userId } }),
+      ])
 
-    return {
-      statusCode: 200,
-      message: `User with username ${username} successfully deleted`,
+      return {
+        statusCode: 200,
+        message: `User with username ${username} successfully deleted`,
+      }
+    } catch (error) {
+      throw new InternalServerErrorException('Something went wrong')
     }
   }
 
   async followOrUnfollowUser(userId: string, targetUsername: string) {
-    const [target, user] = await this.db.$transaction([
-      this.db.user.findUnique({ where: { username: targetUsername } }),
-      this.db.user.findUnique({
-        where: { id: userId },
-        include: {
-          following: { select: profileSelect },
-        },
-      }),
-    ])
+    try {
+      const [target, user] = await this.db.$transaction([
+        this.db.user.findUnique({ where: { username: targetUsername } }),
+        this.db.user.findUnique({
+          where: { id: userId },
+          include: {
+            following: { select: profileSelect },
+          },
+        }),
+      ])
 
-    if (!target) {
-      throw new NotFoundException(
-        'The user you are trying to follow does not exist',
-      )
-    }
+      if (!target) {
+        throw new NotFoundException(
+          'The user you are trying to follow does not exist',
+        )
+      }
 
-    // if the user already being followed
-    // unfollow the user
-    if (user.following.some(f => f.username === targetUsername)) {
+      // if the user already being followed
+      // unfollow the user
+      if (user.following.some(f => f.username === targetUsername)) {
+        await this.db.user.update({
+          where: { id: userId },
+          data: {
+            following: {
+              disconnect: { id: target.id },
+            },
+          },
+        })
+
+        return {
+          statusCode: 200,
+          message: `${user.username} unfollowed ${targetUsername}`,
+        }
+      }
+
+      // otherwise, follow the user
       await this.db.user.update({
         where: { id: userId },
         data: {
           following: {
-            disconnect: { id: target.id },
+            connect: { id: target.id },
           },
         },
       })
 
       return {
-        statusCode: 200,
-        message: `${user.username} unfollowed ${targetUsername}`,
+        status: 200,
+        message: `${user.username} followed ${target.username}`,
       }
-    }
-
-    // otherwise, follow the user
-    await this.db.user.update({
-      where: { id: userId },
-      data: {
-        following: {
-          connect: { id: target.id },
-        },
-      },
-    })
-
-    return {
-      status: 200,
-      message: `${user.username} followed ${target.username}`,
+    } catch (error) {
+      throw new InternalServerErrorException('Something went wrong')
     }
   }
 }
