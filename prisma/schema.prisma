@@ -40,8 +40,8 @@ model Post {
   title   String
   content String
 
-  likedBy     User[]    @relation("UserLikes", references: [id])
-  commentedBy Comment[]
+  likedBy  User[]    @relation("UserLikes", references: [id])
+  comments Comment[]
 
   author   User   @relation("UserPosts", fields: [authorId], references: [id])
   authorId String
