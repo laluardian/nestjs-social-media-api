@@ -22,12 +22,12 @@ model User {
   image String?
   bio   String?
 
-  posts    Post[]    @relation("UserPosts")
-  likes    Post[]    @relation("UserLikes")
+  posts    Post[]    @relation("user_posts")
+  likes    Post[]    @relation("user_likes")
   comments Comment[]
 
-  following User[] @relation("UserFollows", references: [id])
-  followers User[] @relation("UserFollows", references: [id])
+  following User[] @relation("user_follows", references: [id])
+  followers User[] @relation("user_follows", references: [id])
 
   @@map("users")
 }
@@ -40,10 +40,10 @@ model Post {
   title   String
   content String
 
-  likedBy  User[]    @relation("UserLikes", references: [id])
+  likedBy  User[]    @relation("user_likes", references: [id])
   comments Comment[]
 
-  author   User   @relation("UserPosts", fields: [authorId], references: [id])
+  author   User   @relation("user_posts", fields: [authorId], references: [id])
   authorId String
 
   @@map("posts")
