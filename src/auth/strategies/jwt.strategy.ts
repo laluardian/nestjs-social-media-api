@@ -17,11 +17,9 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
     const user = await this.db.user.findUnique({
       where: { id: payload.sub },
     })
-
     delete user.hash
-
     // by returning the user, we append the user object into
-    // the request object and become accessible
+    // the request object to make it accessible
     return user
   }
 }

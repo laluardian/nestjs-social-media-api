@@ -20,14 +20,17 @@ export class PostService {
         comments: true,
       },
     })
-
     return post
   }
 
   async getFeedPosts(userId: string) {
     const following = await this.db.user.findUnique({
       where: { id: userId },
-      select: { following: { select: { id: true } } },
+      select: {
+        following: {
+          select: { id: true },
+        },
+      },
     })
 
     const posts = await this.db.post.findMany({
@@ -47,9 +50,11 @@ export class PostService {
   async createPost(userId: string, dto: CreatePostDto) {
     try {
       const post = await this.db.post.create({
-        data: { authorId: userId, ...dto },
+        data: {
+          authorId: userId,
+          ...dto,
+        },
       })
-
       return post
     } catch (error) {
       throw new InternalServerErrorException('Something went wrong')
@@ -81,7 +86,6 @@ export class PostService {
             },
           },
         })
-
         return {
           statusCode: 200,
           message: `${user.username} unliked a post with id ${post.id}`,

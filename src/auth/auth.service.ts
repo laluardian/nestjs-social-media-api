@@ -26,13 +26,11 @@ export class AuthService {
 
   async signUp(dto: SignUpDto) {
     const { username, email, password } = dto
-
     try {
       const hash = await bcrypt.hash(password, 10)
       const user = await this.db.user.create({
         data: { username, email, hash },
       })
-
       return this.signToken(user.id, user.email)
     } catch (error) {
       if (
@@ -52,12 +50,10 @@ export class AuthService {
 
   async signIn(dto: SignInDto) {
     const { email, password } = dto
-
     try {
       const user = await this.db.user.findUnique({ where: { email } })
       const validPassword = await bcrypt.compare(password, user.hash)
       if (!validPassword) throw new Error()
-
       return this.signToken(user.id, user.email)
     } catch (error) {
       if (error instanceof PrismaClientInitializationError) {
@@ -68,22 +64,29 @@ export class AuthService {
   }
 
   async updatePassword(userId: string, dto: UpdatePasswordDto) {
-    const user = await this.db.user.findUnique({
-      where: { id: userId },
-      select: { hash: true },
-    })
+    try {
+      const user = await this.db.user.findUnique({
+        where: { id: userId },
+        select: { hash: true },
+      })
 
-    const validPassword = await bcrypt.compare(dto.currentPassword, user.hash)
-    if (!validPassword) {
-      throw new NotAcceptableException('Current password is incorrect')
-    }
+      const validPassword = await bcrypt.compare(dto.currentPassword, user.hash)
+      if (!validPassword) {
+        throw new NotAcceptableException('Current password is incorrect')
+      }
 
-    const hash = await bcrypt.hash(dto.newPassword, 10)
-    await this.db.user.update({ where: { id: userId }, data: { hash } })
+      const hash = await bcrypt.hash(dto.newPassword, 10)
+      await this.db.user.update({
+        where: { id: userId },
+        data: { hash },
+      })
 
-    return {
-      statusCode: 200,
-      message: 'Password successfully updated',
+      return {
+        statusCode: 200,
+        message: 'Password successfully updated',
+      }
+    } catch (error) {
+      throw new InternalServerErrorException('Something went wrong')
     }
   }
 
@@ -94,7 +97,6 @@ export class AuthService {
       expiresIn: '24h',
       secret,
     })
-
     return { access_token: token }
   }
 }

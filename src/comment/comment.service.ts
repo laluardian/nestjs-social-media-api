@@ -16,7 +16,6 @@ export class CommentService {
       const comment = await this.db.comment.create({
         data: { authorId: userId, postId, ...dto },
       })
-
       return comment
     } catch (error) {
       throw new InternalServerErrorException('Something went wrong')
